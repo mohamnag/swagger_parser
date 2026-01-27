@@ -623,6 +623,14 @@ class OpenApiParser {
       pathValue.forEach((key, requestPath) {
         // Process this path/method within its context
         _contextStack.withContext('path:$path:$key', () {
+          // `servers` and `parameters` contain List<dynamic>, skip them first
+          // before attempting to cast to Map<String, dynamic>
+          if (key == _serversConst ||
+              key == _parametersConst ||
+              key.startsWith('x-')) {
+            return;
+          }
+
           // check if this requestPath has any tags that
           // define wether the requestPath should be included
           if (!_isPathIncluded(requestPath as Map<String, dynamic>)) {
@@ -630,13 +638,6 @@ class OpenApiParser {
           }
 
           _anchorRegistry.markContextAsIncluded(_contextStack.current!);
-
-          // `servers` contains List<dynamic>
-          if (key == _serversConst ||
-              key == _parametersConst ||
-              key.startsWith('x-')) {
-            return;
-          }
 
           final requestPathResponses =
               requestPath[_responsesConst] as Map<String, dynamic>;
