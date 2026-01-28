@@ -856,6 +856,42 @@ class OpenApiParser {
     return (parameters, imports);
   }
 
+  /// Like [_findParametersAndImports] but also handles allOf composition.
+  /// For schemas with allOf, it collects properties from all parts using
+  /// "last one wins" semantics for duplicate property names.
+  (Set<UniversalType>, Set<String>) _findParametersAndImportsWithAllOf(
+    Map<String, dynamic> map, {
+    String? additionalName,
+  }) {
+    // If schema has allOf, collect properties from all parts
+    if (map.containsKey(_allOfConst)) {
+      final allOf = map[_allOfConst] as List<dynamic>;
+      final allParameters = <String, UniversalType>{};
+      final allImports = <String>{};
+
+      for (final part in allOf) {
+        if (part is Map<String, dynamic>) {
+          final (partParams, partImports) = _findParametersAndImports(
+            part,
+            additionalName: additionalName,
+          );
+          // Use map to implement "last one wins" for duplicate property names
+          for (final param in partParams) {
+            if (param.name != null) {
+              allParameters[param.name!] = param;
+            }
+          }
+          allImports.addAll(partImports);
+        }
+      }
+
+      return (allParameters.values.toSet(), allImports);
+    }
+
+    // No allOf, use standard behavior
+    return _findParametersAndImports(map, additionalName: additionalName);
+  }
+
   /// Parses data classes from `components` of definition file
   /// and return list of [UniversalDataClass]
   List<UniversalDataClass> parseDataClasses() {
@@ -892,14 +928,30 @@ class OpenApiParser {
         final parameters = <UniversalType>{};
         final imports = SplayTreeSet<String>();
 
-        /// Used for find properties in map
+        // Use Map for deduplication by name with "last one wins" semantics
+        // This handles allOf compositions where the same field is defined
+        // in multiple parts (e.g., with different types for request vs response)
+        final _dedupeMap = <String, UniversalType>{};
+
+        /// Used for find properties in map with deduplication
         void localFindParametersAndImports(Map<String, dynamic> map) {
           final (findParameters, findImports) = _findParametersAndImports(
             map,
             additionalName: key,
           );
-          parameters.addAll(findParameters);
+          for (final param in findParameters) {
+            if (param.name != null) {
+              _dedupeMap[param.name!] = param; // Last one wins
+            } else {
+              parameters.add(param);
+            }
+          }
           imports.addAll(findImports);
+        }
+
+        /// Finalize parameters after all allOf parts are processed
+        void finalizeParameters() {
+          parameters.addAll(_dedupeMap.values);
         }
 
         if (value.containsKey(_propertiesConst)) {
@@ -976,6 +1028,9 @@ class OpenApiParser {
             }
           }
         }
+
+        // Finalize parameters by adding deduplicated named parameters
+        finalizeParameters();
 
         final allOf =
             refs.isNotEmpty ? (refs: refs, properties: parameters) : null;
@@ -2203,7 +2258,10 @@ class OpenApiParser {
               }
             } when schemas[refName] is Map<String, dynamic>) {
           final schemaMap = schemas[refName] as Map<String, dynamic>;
-          final (props, propImports) = _findParametersAndImports(
+
+          // Handle allOf composition: collect properties from all parts
+          // using "last one wins" for duplicate property names
+          final (props, propImports) = _findParametersAndImportsWithAllOf(
             schemaMap,
             additionalName: refName,
           );
@@ -2215,7 +2273,8 @@ class OpenApiParser {
         // so factories are named `variant<idx>` and classes `${unionName}Variant<idx>`.
         final idx = otherItems.indexOf(item) + 1;
         final variantKey = 'variant$idx';
-        final (props, propImports) = _findParametersAndImports(
+        // Use allOf-aware function in case inline variant uses allOf composition
+        final (props, propImports) = _findParametersAndImportsWithAllOf(
           item,
           additionalName: '${unionName}Variant$idx',
         );

@@ -541,12 +541,10 @@ ${indentation(2)}});
       ? '''
 @MappableClass()
 class $className${fallbackUnion.toPascal} extends $className with $className${fallbackUnion.toPascal}Mappable {
-${indentation(2)}final Map<String, dynamic> _json;
+${indentation(2)}/// Raw JSON data for unknown union variant
+${indentation(2)}final Map<String, dynamic> rawJson;
 
-${indentation(2)}const $className${fallbackUnion.toPascal}(this._json);
-
-${indentation(2)}/// Access raw JSON data for unknown union variant
-${indentation(2)}Map<String, dynamic> get json => _json;
+${indentation(2)}const $className${fallbackUnion.toPascal}(this.rawJson);
 
 ${indentation(2)}static $className${fallbackUnion.toPascal} fromJson(Map<String, dynamic> json) =>
 ${indentation(6)}$className${fallbackUnion.toPascal}(json);
@@ -740,12 +738,10 @@ ${indentation(2)}});
     wrappers.add('''
 @MappableClass(discriminatorValue: MappableClass.useAsDefault)
 class $className${fallbackUnion.toPascal} extends $className with $className${fallbackUnion.toPascal}Mappable {
-${indentation(2)}final Map<String, dynamic> _json;
+${indentation(2)}/// Raw JSON data for unknown union variant
+${indentation(2)}final Map<String, dynamic> rawJson;
 
-${indentation(2)}const $className${fallbackUnion.toPascal}(this._json);
-
-${indentation(2)}/// Access raw JSON data for unknown union variant
-${indentation(2)}Map<String, dynamic> get json => _json;
+${indentation(2)}const $className${fallbackUnion.toPascal}(this.rawJson);
 
 ${indentation(2)}static $className${fallbackUnion.toPascal} fromJson(Map<String, dynamic> json) =>
 ${indentation(6)}$className${fallbackUnion.toPascal}(json);
