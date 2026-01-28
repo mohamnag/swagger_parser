@@ -1015,18 +1015,28 @@ class OpenApiParser {
           }
         }
 
-        if (value.containsKey(_allOfConst)) {
-          for (final map in value[_allOfConst] as List<dynamic>) {
-            if ((map as Map<String, dynamic>).containsKey(_refConst)) {
-              final ref = _formatRef(map);
+        // Recursive helper to process allOf arrays (handles nested allOf)
+        void processAllOf(List<dynamic> allOfList) {
+          for (final map in allOfList) {
+            if (map is! Map<String, dynamic>) continue;
 
+            if (map.containsKey(_refConst)) {
+              final ref = _formatRef(map);
               refs.add(ref);
               continue;
+            }
+            // Handle nested allOf recursively
+            if (map.containsKey(_allOfConst)) {
+              processAllOf(map[_allOfConst] as List<dynamic>);
             }
             if (map.containsKey(_propertiesConst)) {
               localFindParametersAndImports(map);
             }
           }
+        }
+
+        if (value.containsKey(_allOfConst)) {
+          processAllOf(value[_allOfConst] as List<dynamic>);
         }
 
         // Finalize parameters by adding deduplicated named parameters
