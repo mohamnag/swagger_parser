@@ -45,6 +45,8 @@ class OpenApiParser {
   final _objectNamesCount = <String, int>{};
   final _usedSchemas = <String>{};
   final _schemaDependencies = <String, Set<String>>{};
+  /// Maps original schema names to their union class names (for anyOf/oneOf schemas)
+  final _schemaToUnionName = <String, String>{};
   final _anchorRegistry = AnchorRegistry();
   final _contextStack = ContextStack();
 
@@ -1012,6 +1014,8 @@ class OpenApiParser {
           final union =
               _createUnionComponentClass(unionValues, key, description);
           if (union != null) {
+            // Track mapping from original schema name to union class name
+            _schemaToUnionName[key.toPascal] = union.name;
             dataClasses.add(union);
             return;
           }
@@ -2073,15 +2077,18 @@ class OpenApiParser {
       String? import;
       String type;
       if (map.containsKey(_refConst)) {
-        import = _formatRef(map).toPascal;
+        final refName = _formatRef(map).toPascal;
+        // Resolve to union class name if this schema was parsed as a union type
+        import = _schemaToUnionName[refName] ?? refName;
       } else if (map.containsKey(_additionalPropertiesConst) &&
           map[_additionalPropertiesConst] is Map<String, dynamic> &&
           (map[_additionalPropertiesConst] as Map<String, dynamic>).containsKey(
             _refConst,
           )) {
-        import = _formatRef(
+        final refName = _formatRef(
           map[_additionalPropertiesConst] as Map<String, dynamic>,
         ).toPascal;
+        import = _schemaToUnionName[refName] ?? refName;
       }
 
       if (map.containsKey(_typeConst)) {
