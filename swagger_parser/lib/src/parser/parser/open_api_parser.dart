@@ -859,6 +859,7 @@ class OpenApiParser {
   /// Like [_findParametersAndImports] but also handles allOf composition.
   /// For schemas with allOf, it collects properties from all parts using
   /// "last one wins" semantics for duplicate property names.
+  /// Handles nested allOf recursively.
   (Set<UniversalType>, Set<String>) _findParametersAndImportsWithAllOf(
     Map<String, dynamic> map, {
     String? additionalName,
@@ -871,7 +872,8 @@ class OpenApiParser {
 
       for (final part in allOf) {
         if (part is Map<String, dynamic>) {
-          final (partParams, partImports) = _findParametersAndImports(
+          // Recursively handle nested allOf
+          final (partParams, partImports) = _findParametersAndImportsWithAllOf(
             part,
             additionalName: additionalName,
           );
