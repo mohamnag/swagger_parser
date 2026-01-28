@@ -138,7 +138,6 @@ String getDiscriminatorConvenienceMethods(
   }) {
     return switch (this) {
     ${switchCases.join('\n    ')}
-      _ => throw Exception("Unhandled type: \${this.runtimeType}"),
     };
   }
   ''';
@@ -358,7 +357,6 @@ ${maybeWhenCases.join('\n')}
 ${indentation(2)}}) {
 ${indentation(4)}return switch (this) {
 ${switchCases.join('\n')}
-${indentation(6)}_ => throw Exception("Unhandled type: \${this.runtimeType}"),
 ${indentation(4)}};
 ${indentation(2)}}
 ''';
